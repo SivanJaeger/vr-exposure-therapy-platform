@@ -41,6 +41,22 @@ app.post("/session/start", (req, res) => {
   res.status(201).send(currentSession);
 });
 
+app.post("/session/event", (req, res) => {
+  if (!currentSession) {
+    return res.status(400).send(buildErrorObject("No active session. Please start a session first.", "NO_ACTIVE_SESSION"));
+  }
+
+  const { type, value } = req.body || {};
+
+  //validate input
+  if (typeof type !== "string" || type.trim() === "") {
+    return res.status(400).send(buildErrorObject("Invalid input: event type must be a non-empty string", "INVALID_INPUT"));
+  }
+  // value is optional, so stored even if it is null or undefined.
+  const event = {id: Date.now(), type, value, timestamp: new Date()};
+  currentSession.events.push(event);
+  res.status(201).send(event);
+});
 
 app.get("/", (req, res) => {
   res.send("VR Exposure Backend Running");
