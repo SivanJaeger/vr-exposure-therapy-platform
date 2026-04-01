@@ -58,6 +58,13 @@ app.post("/session/event", (req, res) => {
   res.status(201).send(event);
 });
 
+app.get("/session/current", (req, res) => {
+  if (!currentSession) {
+    return res.status(404).send(buildErrorObject("No active session found", "NO_ACTIVE_SESSION"));
+  }
+  res.status(200).send(currentSession);
+});
+
 app.get("/", (req, res) => {
   res.send("VR Exposure Backend Running");
 });
