@@ -33,6 +33,7 @@ app.post("/session/start", (req, res) => {
   currentSession = {
   id: Date.now(),
   startTime: new Date(),
+  active: true,
   scenario: {
     height,
     distance
@@ -43,7 +44,7 @@ app.post("/session/start", (req, res) => {
 });
 
 app.post("/session/event", (req, res) => {
-  if (!currentSession) {
+  if (!currentSession || !currentSession.active) {
     return res.status(409).send(buildErrorObject("No active session. Please start a session first.", "NO_ACTIVE_SESSION"));
   }
   // status 409 is used to indicate that the request could not be completed due to a conflict with the current state of the resource, which in this case is the absence of an active session.
@@ -68,8 +69,17 @@ app.post("/session/event", (req, res) => {
 
 app.get("/session/current", (req, res) => {
   if (!currentSession) {
-    return res.status(404).send(buildErrorObject("No active session found", "NO_ACTIVE_SESSION"));
+    return res.status(404).send(buildErrorObject("No session detected", "NO_SESSION"));
   }
+  res.status(200).send(currentSession);
+});
+
+app.post("/session/end", (req, res) => {
+  if (!currentSession || !currentSession.active) {
+    return res.status(409).send(buildErrorObject("No active session to end", "NO_ACTIVE_SESSION"));
+  }
+  currentSession.active = false;
+  currentSession.endTime = new Date();
   res.status(200).send(currentSession);
 });
 
