@@ -5,6 +5,7 @@ app.use(express.json());
 
 const PORT = 3000;
 let currentSession = null;
+const EVENT_TYPES = ["PARAM_CHANGE", "PAUSE", "RESUME", "STOP"];
 
 
 
@@ -20,7 +21,7 @@ app.post("/session/start", (req, res) => {
     return res.status(400).send(buildErrorObject("Invalid input: height and distance are required", "INVALID_INPUT"));
   }
 
-  if (Number.isFinite(height) === false || Number.isFinite(distance) === false) {
+  if (!Number.isFinite(height) || !Number.isFinite(distance)) {
     return res.status(400).send(buildErrorObject("Invalid input: height and distance must be numbers", "INVALID_INPUT"));
   }
 
@@ -43,17 +44,24 @@ app.post("/session/start", (req, res) => {
 
 app.post("/session/event", (req, res) => {
   if (!currentSession) {
-    return res.status(400).send(buildErrorObject("No active session. Please start a session first.", "NO_ACTIVE_SESSION"));
+    return res.status(409).send(buildErrorObject("No active session. Please start a session first.", "NO_ACTIVE_SESSION"));
   }
+  // status 409 is used to indicate that the request could not be completed due to a conflict with the current state of the resource, which in this case is the absence of an active session.
 
   const { type, value } = req.body || {};
 
   //validate input
-  if (typeof type !== "string" || type.trim() === "") {
-    return res.status(400).send(buildErrorObject("Invalid input: event type must be a non-empty string", "INVALID_INPUT"));
+  if (typeof type !== "string" ) {
+    return res.status(400).send(buildErrorObject("Invalid input: event type must be a string", "INVALID_INPUT"));
+  }
+
+  let normalizedType = type.trim().toUpperCase();
+
+  if(!isValidEventType(normalizedType)) {
+    return res.status(400).send(buildErrorObject("Invalid input: event type must be one of the allowed event types: " + EVENT_TYPES.join(", "), "INVALID_INPUT"));
   }
   // value is optional, so stored even if it is null or undefined.
-  const event = {id: Date.now(), type, value, timestamp: new Date()};
+  const event = {id: Date.now(), type: normalizedType, value, timestamp: new Date()};
   currentSession.events.push(event);
   res.status(201).send(event);
 });
@@ -78,4 +86,8 @@ app.listen(PORT, () => {
 function buildErrorObject(message, errorCode) {
   const errorObject = {message, timestamp: new Date(), errorCode};
   return errorObject;
+}
+
+function isValidEventType(type) {
+  return EVENT_TYPES.includes(type);
 }
